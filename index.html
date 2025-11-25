@@ -2,48 +2,51 @@
 <html lang="uk">
 <head>
     <meta charset="UTF-8">
+    <!-- Забороняємо браузеру самому масштабувати сторінку -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Map of Far Lands</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        /* Темний фон, щоб межі виглядали стильно */
+        /* Темний фон */
         body, html { 
             margin: 0; 
             padding: 0; 
             height: 100%; 
-            background: #000000; 
+            background: #121212; 
             overflow: hidden; 
             font-family: sans-serif; 
+            /* Запобігаємо виділенню тексту та стандартним жестам на мобільному */
+            touch-action: none; 
+            -webkit-user-select: none;
+            user-select: none;
         }
         
-        /* Вікно перегляду */
+        /* Контейнер для скролу */
         #viewport {
             width: 100%;
             height: 100%;
             overflow: auto; 
             position: relative;
-            /* Центрування карти, якщо вона менша за екран */
+            scroll-behavior: smooth; 
+            -webkit-overflow-scrolling: touch; /* Плавність на iOS */
             display: flex;
             justify-content: center;
             align-items: center;
-            /* Плавна прокрутка */
-            scroll-behavior: smooth; 
-            -webkit-overflow-scrolling: touch;
         }
 
-        /* Контейнер карти */
+        /* Обгортка для карти */
         #map-container {
             position: relative;
             transform-origin: 0 0;
-            box-shadow: 0 0 50px rgba(0,0,0,0.8); /* Тінь для краси */
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
         }
 
-        /* Сама картинка - ГОЛОВНЕ ВИПРАВЛЕННЯ ЗКОШЕННЯ */
+        /* Сама картинка */
         #world-map {
             display: block;
-            width: 100%;      /* Займає контейнер */
-            height: auto;     /* Автоматична висота зберігає пропорції! */
-            object-fit: contain;
+            width: 1000px; /* Базова ширина */
+            height: auto;  /* Зберігає пропорції */
+            pointer-events: none; /* Щоб картинка не блокувала події миші/пальця */
         }
 
         /* --- Маркери --- */
@@ -61,15 +64,13 @@
         .location-dot {
             position: absolute;
             width: 14px; height: 14px;
-            background-color: rgba(255, 255, 255, 0.8);
+            background-color: rgba(255, 255, 255, 0.6);
             border: 2px solid #000;
             border-radius: 50%;
             transform: translate(-50%, -50%);
             z-index: 50;
             cursor: pointer;
-            transition: transform 0.2s;
         }
-        .location-dot:active { transform: translate(-50%, -50%) scale(1.5); }
 
         .location-label {
             position: absolute;
@@ -120,9 +121,8 @@
 
     <div id="viewport">
         <div id="map-container">
-            <!-- Твоя карта з інтернету -->
+            <!-- Твоя карта -->
             <img id="world-map" src="https://i.im.ge/2025/11/26/4hXkPS.Far-Lands.png" alt="World Map">
-            <!-- Шар маркерів -->
             <div id="markers-layer"></div>
         </div>
     </div>
@@ -136,7 +136,7 @@
         const tg = window.Telegram.WebApp;
         tg.expand();
 
-        // --- КООРДИНАТИ ЛОКАЦІЙ ---
+        // --- ТВОЇ КООРДИНАТИ ---
         const MAP_LOCATIONS = {
             1: { top: 78.03, left: 50.77, name: "Hilinguard" },
             2: { top: 11.81, left: 69.77, name: "Windfoldigan" },
@@ -154,9 +154,8 @@
         const mapImg = document.getElementById('world-map');
         const markersLayer = document.getElementById('markers-layer');
 
-        // Базова ширина зображення для розрахунків масштабу
-        const BASE_IMAGE_WIDTH = 1000; 
-        let currentWidth = BASE_IMAGE_WIDTH;
+        let currentZoom = 1.0;
+        const BASE_WIDTH = 1000; 
 
         // Отримуємо ID з URL
         const urlParams = new URLSearchParams(window.location.search);
@@ -165,67 +164,48 @@
 
         // --- ФУНКЦІЇ МАСШТАБУВАННЯ ---
 
-        function setMapWidth(newWidth) {
-            // Обмеження мінімального розміру (щоб не зникала)
-            const minWidth = window.innerWidth * 0.5; 
-            if (newWidth < minWidth) newWidth = minWidth;
+        function setZoom(zoomLevel) {
+            // Обмеження зуму
+            if (zoomLevel < 0.3) zoomLevel = 0.3; 
+            if (zoomLevel > 4.0) zoomLevel = 4.0; // Трохи збільшив макс зум для телефону
             
-            // Обмеження максимального розміру (щоб не пікселізувалась сильно)
-            const maxWidth = BASE_IMAGE_WIDTH * 4;
-            if (newWidth > maxWidth) newWidth = maxWidth;
-
-            currentWidth = newWidth;
+            currentZoom = zoomLevel;
+            const newWidth = BASE_WIDTH * currentZoom;
             
-            // Застосовуємо ширину
-            mapImg.style.width = currentWidth + 'px';
-            mapContainer.style.width = currentWidth + 'px';
+            mapImg.style.width = newWidth + 'px';
+            mapContainer.style.width = newWidth + 'px';
             
-            // Висота підлаштується автоматично, але контейнеру треба знати висоту для скролу
-            // Рахуємо пропорцію
             if (mapImg.naturalWidth) {
-                const ratio = mapImg.naturalHeight / mapImg.naturalWidth;
-                mapContainer.style.height = (currentWidth * ratio) + 'px';
+                 const ratio = mapImg.naturalHeight / mapImg.naturalWidth;
+                 mapContainer.style.height = (newWidth * ratio) + 'px';
             }
+
+            // Не центруємо при кожному міні-зумі пальцями, щоб не смикалось
         }
 
-        function zoomIn() {
-            setMapWidth(currentWidth * 1.2);
-            // Якщо є ціль, центруємо на ній
-            if (targetLoc) centerOnLocation(targetLoc);
-        }
-
-        function zoomOut() {
-            setMapWidth(currentWidth * 0.8);
-            // Якщо віддаляємо, просто центруємо перегляд
-        }
-
-        // Прив'язка кнопок
-        // (Використовуємо window.zoomIn щоб уникнути конфліктів)
-        window.changeZoom = function(factor) {
-            if (factor > 1) zoomIn(); else zoomOut();
-        }
-
-        // --- ЦЕНТРУВАННЯ ---
-
-        function centerOnLocation(loc) {
-            if (!mapImg.naturalWidth) return;
+        // Функція центрування
+        function centerOnLocation(loc, mapWidth) {
+            const ratio = mapImg.naturalHeight / mapImg.naturalWidth || 0.7;
+            const x = (loc.left / 100) * mapWidth;
+            const y = (loc.top / 100) * (mapWidth * ratio);
             
-            const ratio = mapImg.naturalHeight / mapImg.naturalWidth;
-            
-            // Координати точки в пікселях на поточній карті
-            const x = (loc.left / 100) * currentWidth;
-            const y = (loc.top / 100) * (currentWidth * ratio);
-            
-            // Розміри екрану
             const screenW = viewport.clientWidth;
             const screenH = viewport.clientHeight;
             
-            // Скролимо контейнер
             viewport.scrollLeft = x - screenW / 2;
             viewport.scrollTop = y - screenH / 2;
         }
 
-        // --- МАРКЕРИ ---
+        function changeZoom(factor) {
+            setZoom(currentZoom * factor);
+            // При кнопковому зумі можна центрувати на гравцеві (якщо він є)
+            if (targetLoc) {
+                 const w = BASE_WIDTH * currentZoom;
+                 centerOnLocation(targetLoc, w);
+            }
+        }
+
+        // --- МАРКЕРИ (Твої функції) ---
 
         function createPlayerMarker(loc, text) {
             const marker = document.createElement('div');
@@ -254,25 +234,63 @@
 
         // --- ЗАПУСК ---
         mapImg.onload = () => {
-            // 1. Малюємо точки
             for (const [id, loc] of Object.entries(MAP_LOCATIONS)) {
                 if (id != locId) createDot(loc);
             }
 
-            // 2. Налаштовуємо зум і позицію
             if (targetLoc) {
-                // ГРАВЕЦЬ Є: Ставимо маркер і зумимо ближче
                 createPlayerMarker(targetLoc, "📍 ВИ ТУТ");
-                
-                // Робимо карту трішки більшою за екран, щоб було видно деталі
-                setMapWidth(window.innerWidth * 2.0); 
-                centerOnLocation(targetLoc);
+                setZoom(1.5); 
+                // Центруємо при старті
+                setTimeout(() => centerOnLocation(targetLoc, BASE_WIDTH * 1.5), 100);
             } else {
-                // ГРАВЦЯ НЕМА (просто перегляд): Підганяємо карту під ширину екрану
-                setMapWidth(window.innerWidth);
-                // Центруємо карту в контейнері (CSS flexbox це зробить сам)
+                const screenWidth = window.innerWidth;
+                const fitZoom = screenWidth / BASE_WIDTH;
+                setZoom(fitZoom > 1 ? 1 : fitZoom); 
             }
         };
+
+        // ==================================================
+        // 🔥 НОВА ЛОГІКА ДЛЯ ТЕЛЕФОНУ (PINCH-TO-ZOOM)
+        // ==================================================
+
+        let initialDistance = 0;
+        let initialZoom = 1.0;
+
+        // Коли торкаємося екрану
+        viewport.addEventListener('touchstart', (e) => {
+            // Якщо два пальці - це зум
+            if (e.touches.length === 2) {
+                e.preventDefault(); // Блокуємо стандартну поведінку
+                initialDistance = getDistance(e.touches);
+                initialZoom = currentZoom;
+            }
+        }, { passive: false });
+
+        // Коли рухаємо пальцями
+        viewport.addEventListener('touchmove', (e) => {
+            if (e.touches.length === 2) {
+                e.preventDefault(); // Блокуємо, щоб сторінка не скакала
+                
+                const currentDistance = getDistance(e.touches);
+                if (initialDistance > 0) {
+                    // Рахуємо коефіцієнт зміни
+                    const scale = currentDistance / initialDistance;
+                    
+                    // Застосовуємо новий зум
+                    // Множимо початковий зум цього жесту на коефіцієнт
+                    setZoom(initialZoom * scale);
+                }
+            }
+        }, { passive: false });
+
+        // Допоміжна функція для розрахунку відстані між пальцями
+        function getDistance(touches) {
+            const dx = touches[0].clientX - touches[1].clientX;
+            const dy = touches[0].clientY - touches[1].clientY;
+            return Math.sqrt(dx * dx + dy * dy);
+        }
+
     </script>
 </body>
 </html>
