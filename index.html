@@ -27,8 +27,6 @@
             overflow: auto; /* Дозволяє скрол */
             position: relative;
             cursor: grab; /* Курсор рука для ПК */
-            
-            /* 🔥 ВИПРАВЛЕННЯ: Прибираємо flex, щоб не обрізало лівий край при зумі */
             display: block; 
         }
 
@@ -42,7 +40,7 @@
             transform-origin: 0 0;
             box-shadow: 0 0 20px rgba(0,0,0,0.5);
             
-            /* 🔥 Центруємо карту горизонтально, якщо вона менша за екран */
+            /* Центруємо карту горизонтально */
             margin: 0 auto;
         }
 
@@ -167,7 +165,8 @@
 
         // --- ФУНКЦІЇ МАСШТАБУВАННЯ ---
 
-        function setZoom(zoomLevel) {
+        function setZoom(zoomLevel, disableAutoCenter = false) {
+            // Обмеження
             if (zoomLevel < 0.3) zoomLevel = 0.3; 
             if (zoomLevel > 4.0) zoomLevel = 4.0;
             
@@ -182,8 +181,12 @@
                  mapContainer.style.height = (newWidth * ratio) + 'px';
             }
             
-            // Якщо карта менша за екран, центруємо її вертикально через padding
             centerContainerVertically();
+
+            // Якщо є ціль і ми НЕ заборонили авто-центр (наприклад, при старті)
+            if (targetLoc && !disableAutoCenter) {
+                centerOnLocation(targetLoc, newWidth);
+            }
         }
 
         function centerContainerVertically() {
@@ -203,20 +206,18 @@
             const x = (loc.left / 100) * mapWidth;
             const y = (loc.top / 100) * (mapWidth * ratio);
             
-            viewport.scrollLeft = x - viewport.clientWidth / 2;
-            viewport.scrollTop = y - viewport.clientHeight / 2;
+            const screenW = viewport.clientWidth;
+            const screenH = viewport.clientHeight;
+            
+            viewport.scrollLeft = x - screenW / 2;
+            viewport.scrollTop = y - screenH / 2;
         }
 
         function changeZoom(factor) {
-            const oldZoom = currentZoom;
             setZoom(currentZoom * factor);
-            
-            // Якщо ми збільшуємо, спробуємо зберегти центр (або ціль)
-            if (targetLoc && factor > 1) {
-                 const w = BASE_WIDTH * currentZoom;
-                 centerOnLocation(targetLoc, w);
-            }
         }
+
+        // --- МАРКЕРИ ---
 
         function createPlayerMarker(loc, text) {
             const marker = document.createElement('div');
@@ -290,19 +291,34 @@
         });
 
         // ==================================================
-        // 🔥 ЗУМ КОЛЕСОМ (ДЛЯ ПК)
+        // 🔥 РОЗУМНИЙ ЗУМ КОЛЕСОМ (До курсору)
         // ==================================================
         viewport.addEventListener('wheel', (e) => {
-            e.preventDefault(); // Блокуємо стандартний скрол сторінки
-            
-            // Визначаємо напрямок: 
-            // e.deltaY < 0 це скрол вгору (наближення)
-            // e.deltaY > 0 це скрол вниз (віддалення)
-            const factor = e.deltaY < 0 ? 1.1 : 0.9;
-            
-            setZoom(currentZoom * factor);
-        }, { passive: false });
+            e.preventDefault();
 
+            const rect = mapContainer.getBoundingClientRect();
+            
+            // Координати миші відносно картинки
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+
+            // Напрямок зуму
+            const factor = e.deltaY < 0 ? 1.1 : 0.9;
+            const oldZoom = currentZoom;
+            
+            // Викликаємо зум, але ЗАБОРОНЯЄМО авто-центрування на гравці
+            setZoom(currentZoom * factor, true);
+            
+            // Рахуємо реальну зміну масштабу
+            const realFactor = currentZoom / oldZoom;
+
+            if (realFactor !== 1) {
+                // Коригуємо скрол, щоб точка під мишкою залишилася на місці
+                viewport.scrollLeft += mouseX * (realFactor - 1);
+                viewport.scrollTop += mouseY * (realFactor - 1);
+            }
+
+        }, { passive: false });
 
         // ==================================================
         // 🔥 ЖЕСТИ ДЛЯ ТЕЛЕФОНУ (PINCH-TO-ZOOM)
@@ -324,7 +340,7 @@
                 const currentDistance = getDistance(e.touches);
                 if (initialDistance > 0) {
                     const scale = currentDistance / initialDistance;
-                    setZoom(initialZoom * scale);
+                    setZoom(initialZoom * scale, true); // Також без авто-центру
                 }
             }
         }, { passive: false });
