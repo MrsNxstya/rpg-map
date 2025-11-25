@@ -15,23 +15,25 @@
             background: #121212; 
             overflow: hidden; 
             font-family: sans-serif; 
-            /* Запобігаємо виділенню тексту та стандартним жестам на мобільному */
-            touch-action: none; 
+            touch-action: none; /* Важливо для жестів */
             -webkit-user-select: none;
             user-select: none;
         }
         
-        /* Контейнер для скролу */
+        /* Вікно перегляду */
         #viewport {
             width: 100%;
             height: 100%;
-            overflow: auto; 
+            overflow: auto; /* Дозволяє скрол */
             position: relative;
-            scroll-behavior: smooth; 
-            -webkit-overflow-scrolling: touch; /* Плавність на iOS */
-            display: flex;
-            justify-content: center;
-            align-items: center;
+            cursor: grab; /* Курсор рука для ПК */
+            
+            /* 🔥 ВИПРАВЛЕННЯ: Прибираємо flex, щоб не обрізало лівий край при зумі */
+            display: block; 
+        }
+
+        #viewport:active {
+            cursor: grabbing; /* Курсор "схопив" */
         }
 
         /* Обгортка для карти */
@@ -39,14 +41,19 @@
             position: relative;
             transform-origin: 0 0;
             box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            
+            /* 🔥 Центруємо карту горизонтально, якщо вона менша за екран */
+            margin: 0 auto;
+            /* Для вертикального центрування ми використаємо JS або padding, 
+               бо CSS flex тут ламає скрол */
         }
 
         /* Сама картинка */
         #world-map {
             display: block;
-            width: 1000px; /* Базова ширина */
-            height: auto;  /* Зберігає пропорції */
-            pointer-events: none; /* Щоб картинка не блокувала події миші/пальця */
+            width: 1000px; 
+            height: auto; 
+            pointer-events: none; /* Щоб не заважало тягати мишкою */
         }
 
         /* --- Маркери --- */
@@ -106,7 +113,6 @@
         }
         .btn:active { transform: scale(0.9); background: #555; }
 
-        /* Кнопка закрити */
         .close-btn {
             position: fixed; top: 15px; left: 15px;
             background: rgba(200, 50, 50, 0.9); color: white;
@@ -121,7 +127,7 @@
 
     <div id="viewport">
         <div id="map-container">
-            <!-- Твоя карта -->
+            <!-- Карта -->
             <img id="world-map" src="https://i.im.ge/2025/11/26/4hXkPS.Far-Lands.png" alt="World Map">
             <div id="markers-layer"></div>
         </div>
@@ -157,7 +163,6 @@
         let currentZoom = 1.0;
         const BASE_WIDTH = 1000; 
 
-        // Отримуємо ID з URL
         const urlParams = new URLSearchParams(window.location.search);
         const locId = urlParams.get('loc');
         const targetLoc = MAP_LOCATIONS[locId];
@@ -165,9 +170,8 @@
         // --- ФУНКЦІЇ МАСШТАБУВАННЯ ---
 
         function setZoom(zoomLevel) {
-            // Обмеження зуму
             if (zoomLevel < 0.3) zoomLevel = 0.3; 
-            if (zoomLevel > 4.0) zoomLevel = 4.0; // Трохи збільшив макс зум для телефону
+            if (zoomLevel > 4.0) zoomLevel = 4.0;
             
             currentZoom = zoomLevel;
             const newWidth = BASE_WIDTH * currentZoom;
@@ -179,33 +183,42 @@
                  const ratio = mapImg.naturalHeight / mapImg.naturalWidth;
                  mapContainer.style.height = (newWidth * ratio) + 'px';
             }
-
-            // Не центруємо при кожному міні-зумі пальцями, щоб не смикалось
+            
+            // Якщо карта менша за екран, центруємо її вертикально через padding
+            centerContainerVertically();
         }
 
-        // Функція центрування
+        function centerContainerVertically() {
+            const screenH = viewport.clientHeight;
+            const mapH = mapContainer.clientHeight;
+            
+            if (mapH < screenH) {
+                const topMargin = (screenH - mapH) / 2;
+                mapContainer.style.marginTop = topMargin + 'px';
+            } else {
+                mapContainer.style.marginTop = '0px';
+            }
+        }
+
         function centerOnLocation(loc, mapWidth) {
             const ratio = mapImg.naturalHeight / mapImg.naturalWidth || 0.7;
             const x = (loc.left / 100) * mapWidth;
             const y = (loc.top / 100) * (mapWidth * ratio);
             
-            const screenW = viewport.clientWidth;
-            const screenH = viewport.clientHeight;
-            
-            viewport.scrollLeft = x - screenW / 2;
-            viewport.scrollTop = y - screenH / 2;
+            viewport.scrollLeft = x - viewport.clientWidth / 2;
+            viewport.scrollTop = y - viewport.clientHeight / 2;
         }
 
         function changeZoom(factor) {
+            const oldZoom = currentZoom;
             setZoom(currentZoom * factor);
-            // При кнопковому зумі можна центрувати на гравцеві (якщо він є)
-            if (targetLoc) {
+            
+            // Якщо ми збільшуємо, спробуємо зберегти центр (або ціль)
+            if (targetLoc && factor > 1) {
                  const w = BASE_WIDTH * currentZoom;
                  centerOnLocation(targetLoc, w);
             }
         }
-
-        // --- МАРКЕРИ (Твої функції) ---
 
         function createPlayerMarker(loc, text) {
             const marker = document.createElement('div');
@@ -241,8 +254,7 @@
             if (targetLoc) {
                 createPlayerMarker(targetLoc, "📍 ВИ ТУТ");
                 setZoom(1.5); 
-                // Центруємо при старті
-                setTimeout(() => centerOnLocation(targetLoc, BASE_WIDTH * 1.5), 100);
+                setTimeout(() => centerOnLocation(targetLoc, BASE_WIDTH * 1.5), 50);
             } else {
                 const screenWidth = window.innerWidth;
                 const fitZoom = screenWidth / BASE_WIDTH;
@@ -251,40 +263,59 @@
         };
 
         // ==================================================
-        // 🔥 НОВА ЛОГІКА ДЛЯ ТЕЛЕФОНУ (PINCH-TO-ZOOM)
+        // 🔥 ТЯГАННЯ МИШКОЮ (ДЛЯ ПК)
         // ==================================================
+        let isDragging = false;
+        let startX, startY, scrollLeft, scrollTop;
 
+        viewport.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            viewport.style.cursor = 'grabbing';
+            startX = e.pageX - viewport.offsetLeft;
+            startY = e.pageY - viewport.offsetTop;
+            scrollLeft = viewport.scrollLeft;
+            scrollTop = viewport.scrollTop;
+        });
+
+        viewport.addEventListener('mouseleave', () => { isDragging = false; viewport.style.cursor = 'grab'; });
+        viewport.addEventListener('mouseup', () => { isDragging = false; viewport.style.cursor = 'grab'; });
+
+        viewport.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            e.preventDefault();
+            const x = e.pageX - viewport.offsetLeft;
+            const y = e.pageY - viewport.offsetTop;
+            const walkX = (x - startX); // Швидкість скролу
+            const walkY = (y - startY);
+            viewport.scrollLeft = scrollLeft - walkX;
+            viewport.scrollTop = scrollTop - walkY;
+        });
+
+        // ==================================================
+        // 🔥 ЖЕСТИ ДЛЯ ТЕЛЕФОНУ (PINCH-TO-ZOOM)
+        // ==================================================
         let initialDistance = 0;
         let initialZoom = 1.0;
 
-        // Коли торкаємося екрану
         viewport.addEventListener('touchstart', (e) => {
-            // Якщо два пальці - це зум
             if (e.touches.length === 2) {
-                e.preventDefault(); // Блокуємо стандартну поведінку
+                e.preventDefault();
                 initialDistance = getDistance(e.touches);
                 initialZoom = currentZoom;
             }
         }, { passive: false });
 
-        // Коли рухаємо пальцями
         viewport.addEventListener('touchmove', (e) => {
             if (e.touches.length === 2) {
-                e.preventDefault(); // Блокуємо, щоб сторінка не скакала
-                
+                e.preventDefault();
                 const currentDistance = getDistance(e.touches);
                 if (initialDistance > 0) {
-                    // Рахуємо коефіцієнт зміни
                     const scale = currentDistance / initialDistance;
-                    
-                    // Застосовуємо новий зум
-                    // Множимо початковий зум цього жесту на коефіцієнт
                     setZoom(initialZoom * scale);
                 }
             }
         }, { passive: false });
 
-        // Допоміжна функція для розрахунку відстані між пальцями
         function getDistance(touches) {
             const dx = touches[0].clientX - touches[1].clientX;
             const dy = touches[0].clientY - touches[1].clientY;
