@@ -6,126 +6,279 @@
     <title>Map of Far Lands</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
+        /* Основний стиль сторінки - чорний фон, без відступів */
         body, html { margin: 0; padding: 0; height: 100%; background: #121212; overflow: hidden; font-family: sans-serif; }
         
+        /* Вікно перегляду (Viewport) - тут відбувається скрол */
         #viewport {
-            width: 100%; height: 100%; overflow: auto; position: relative;
-            scroll-behavior: smooth; -webkit-overflow-scrolling: touch;
+            width: 100%;
+            height: 100%;
+            overflow: auto; /* Дозволяє рухати карту пальцем */
+            position: relative;
+            scroll-behavior: smooth; 
+            -webkit-overflow-scrolling: touch; /* Плавність на iOS */
         }
 
-        #map-container { position: relative; transform-origin: 0 0; }
-        
-        #world-map { display: block; width: 1000px; height: auto; }
+        /* Контейнер для картинки і маркерів */
+        #map-container {
+            position: relative;
+            transform-origin: 0 0;
+        }
 
-        /* Маркер гравця */
+        /* Сама картинка карти */
+        #world-map {
+            display: block;
+            width: 1000px; /* Базова ширина, буде змінюватися скриптом */
+            height: auto;
+        }
+
+        /* --- СТИЛІ МАРКЕРІВ --- */
+        
+        /* Маркер гравця (Блимає) */
         .player-marker {
-            position: absolute; width: 40px; height: 40px;
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            /* Іконка героя */
             background-image: url('https://cdn-icons-png.flaticon.com/512/686/686456.png');
-            background-size: cover; transform: translate(-50%, -100%);
-            z-index: 100; filter: drop-shadow(0 0 8px yellow);
+            background-size: cover;
+            transform: translate(-50%, -100%); /* Центруємо вістря */
+            z-index: 100;
+            filter: drop-shadow(0 0 8px yellow); /* Світіння */
             animation: bounce 1s infinite alternate;
         }
 
-        /* Точки локацій */
+        /* Маркери інших локацій (статичні точки) */
         .location-dot {
-            position: absolute; width: 14px; height: 14px;
-            background-color: rgba(255, 255, 255, 0.6);
-            border: 2px solid #000; border-radius: 50%;
-            transform: translate(-50%, -50%); z-index: 50; cursor: pointer;
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            background-color: rgba(255, 255, 255, 0.5);
+            border: 2px solid #000;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 50;
+            cursor: pointer;
         }
 
+        /* Підпис локації */
         .location-label {
-            position: absolute; background: rgba(0, 0, 0, 0.8); color: #fff;
-            padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold;
-            transform: translate(-50%, 10px); white-space: nowrap;
-            border: 1px solid #ffd700; z-index: 99; pointer-events: none;
+            position: absolute;
+            background: rgba(0, 0, 0, 0.8);
+            color: #fff;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            transform: translate(-50%, 5px); /* Трохи нижче точки */
+            white-space: nowrap;
+            border: 1px solid #ffd700;
+            z-index: 99;
+            pointer-events: none; /* Щоб не заважав клікати */
+            box-shadow: 0 2px 4px rgba(0,0,0,0.5);
         }
 
-        @keyframes bounce { from { transform: translate(-50%, -100%); } to { transform: translate(-50%, -120%); } }
+        /* Анімація стрибання маркера */
+        @keyframes bounce {
+            from { transform: translate(-50%, -100%); }
+            to { transform: translate(-50%, -120%); }
+        }
 
-        .controls { position: fixed; bottom: 30px; right: 20px; display: flex; flex-direction: column; gap: 15px; z-index: 1000; }
-        .btn { width: 50px; height: 50px; background: rgba(30, 30, 30, 0.9); color: white; border: 1px solid #777; border-radius: 50%; font-size: 24px; display: flex; justify-content: center; align-items: center; cursor: pointer; user-select: none; }
-        .close-btn { position: fixed; top: 15px; left: 15px; background: rgba(200, 50, 50, 0.9); color: white; padding: 8px 16px; border-radius: 20px; font-weight: bold; cursor: pointer; z-index: 1000; }
+        /* --- КНОПКИ КЕРУВАННЯ --- */
+        
+        .controls {
+            position: fixed;
+            bottom: 30px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            z-index: 1000;
+        }
+
+        .btn {
+            width: 50px;
+            height: 50px;
+            background: rgba(30, 30, 30, 0.9);
+            color: white;
+            border: 1px solid #777;
+            border-radius: 50%;
+            font-size: 24px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            user-select: none;
+            transition: transform 0.1s;
+        }
+        
+        .btn:active { transform: scale(0.9); background: #555; }
+
+        .close-btn {
+            position: fixed;
+            top: 15px;
+            left: 15px;
+            background: rgba(200, 50, 50, 0.9);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 1000;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+        }
     </style>
 </head>
 <body>
+
+    <!-- Кнопка закриття (щоб повернутися в чат) -->
     <div class="close-btn" onclick="Telegram.WebApp.close()">Закрити</div>
+
+    <!-- Вікно з картою -->
     <div id="viewport">
         <div id="map-container">
-            <!-- 🔴 ВСТАВ СЮДИ ПОСИЛАННЯ НА ТВОЮ КАРТИНКУ -->
-            <img id="world-map" src="https://i.im.ge/2025/11/26/4hXkPS.Far-Lands.png" alt="World Map">
+            <!-- 🔥 ВАЖЛИВО: Файл картинки має називатися map.jpg і лежати поруч -->
+            <!-- Або встав сюди пряме посилання на картинку в інтернеті -->
+            <img id="world-map" src="map.jpg" alt="World Map">
+            
+            <!-- Сюди скрипт буде додавати маркери -->
             <div id="markers-layer"></div>
         </div>
     </div>
+
+    <!-- Кнопки зуму -->
     <div class="controls">
         <div class="btn" onclick="changeZoom(1.2)">➕</div>
         <div class="btn" onclick="changeZoom(0.8)">➖</div>
     </div>
 
     <script>
-        const tg = window.Telegram.WebApp; tg.expand();
+        // 1. Ініціалізація WebApp
+        const tg = window.Telegram.WebApp;
+        tg.expand(); // Розгортаємо на весь екран
+        tg.enableClosingConfirmation(); // Запитувати підтвердження при закритті
 
-        // 🔴 ТВОЇ КООРДИНАТИ (Підстав точні з інструменту, якщо ці не підходять)
+        // 2. БАЗА КООРДИНАТ (Твої дані)
+        // left = X (%), top = Y (%)
         const MAP_LOCATIONS = {
-    1: { top: 78.03, left: 50.77 }, // Hillinguard
-    2: { top: 11.81, left: 69.77 }, // Windfoldigan
-    3: { top: 58.98, left: 49.52 }, // Oceanrise
-    4: { top: 32.00, left: 32.18 }, // Stormfallen
-    5: { top: 32.00, left: 60.03 }, // Heathergan
-    6: { top: 55.35, left: 56.83 }, // Winterfall
-    7: { top: 67.14, left: 16.68 }, // Forestfall
-    8: { top: 70.77, left: 79.28 }, // Liddingal
-};
+            1: { top: 78.03, left: 50.77, name: "Hilinguard" },
+            2: { top: 11.81, left: 69.77, name: "Windfoldigan" },
+            3: { top: 58.98, left: 49.52, name: "Forestfall" }, 
+            4: { top: 32.00, left: 32.18, name: "Stormfallen" },
+            5: { top: 32.00, left: 60.03, name: "Oceanrise" }, 
+            6: { top: 55.35, left: 56.83, name: "Heathergan" }, 
+            7: { top: 67.14, left: 16.68, name: "Winterfall" },
+            8: { top: 70.77, left: 79.28, name: "Liddingal" },
+        };
 
+        // Отримуємо елементи
         const viewport = document.getElementById('viewport');
         const mapContainer = document.getElementById('map-container');
         const mapImg = document.getElementById('world-map');
         const markersLayer = document.getElementById('markers-layer');
-        let currentZoom = 1.0; const BASE_WIDTH = 1000; 
-        
+
+        // Налаштування зуму
+        let currentZoom = 1.0; 
+        const BASE_WIDTH = 1000; // Базова ширина картинки для розрахунків
+
+        // 3. Отримуємо ID локації, яку передав Python (через URL ?loc=5)
         const urlParams = new URLSearchParams(window.location.search);
         const locId = urlParams.get('loc');
         const targetLoc = MAP_LOCATIONS[locId];
 
+        // Функція зміни зуму
         function setZoom(zoomLevel) {
-            if (zoomLevel < 0.5) zoomLevel = 0.5; if (zoomLevel > 3.0) zoomLevel = 3.0;
+            // Ліміти: не менше 50%, не більше 300%
+            if (zoomLevel < 0.5) zoomLevel = 0.5;
+            if (zoomLevel > 3.0) zoomLevel = 3.0;
+            
             currentZoom = zoomLevel;
             const newWidth = BASE_WIDTH * currentZoom;
+            
+            // Змінюємо розмір картинки та контейнера
             mapImg.style.width = newWidth + 'px';
             mapContainer.style.width = newWidth + 'px';
+            // Висота авто, але контейнеру потрібна точна висота
             mapContainer.style.height = (newWidth * (mapImg.naturalHeight / mapImg.naturalWidth || 0.7)) + 'px';
-            if (targetLoc) centerOnLocation(targetLoc, newWidth);
+            
+            // Якщо є гравець, центруємо на ньому при зумі (щоб не губився)
+            if (targetLoc) {
+                centerOnLocation(targetLoc, newWidth);
+            }
         }
 
+        // Функція центрування екрану на точці
         function centerOnLocation(loc, mapWidth) {
             const ratio = mapImg.naturalHeight / mapImg.naturalWidth || 0.7; 
+            const mapHeight = mapWidth * ratio;
+
+            // Де ця точка зараз у пікселях?
             const x = (loc.left / 100) * mapWidth;
-            const y = (loc.top / 100) * (mapWidth * ratio);
-            viewport.scrollLeft = x - viewport.clientWidth / 2;
-            viewport.scrollTop = y - viewport.clientHeight / 2;
+            const y = (loc.top / 100) * mapHeight;
+
+            // Розміри екрану телефону
+            const screenW = viewport.clientWidth;
+            const screenH = viewport.clientHeight;
+
+            // Скролимо так, щоб точка була по центру
+            viewport.scrollLeft = x - screenW / 2;
+            viewport.scrollTop = y - screenH / 2;
         }
 
-        function changeZoom(factor) { setZoom(currentZoom * factor); }
+        function changeZoom(factor) {
+            setZoom(currentZoom * factor);
+        }
 
+        // 4. ГОЛОВНИЙ ЗАПУСК (Коли картинка завантажилась)
         mapImg.onload = () => {
+            // Малюємо всі точки міст (для краси)
             for (const [id, loc] of Object.entries(MAP_LOCATIONS)) {
+                // Не малюємо точку там, де стоїть гравець (там буде великий маркер)
                 if (id != locId) {
-                    const dot = document.createElement('div'); dot.className = 'location-dot';
-                    dot.style.left = loc.left + '%'; dot.style.top = loc.top + '%';
-                    dot.onclick = () => alert(loc.name);
-                    markersLayer.appendChild(dot);
+                    createDot(loc);
                 }
             }
+
             if (targetLoc) {
-                const m = document.createElement('div'); m.className = 'player-marker';
-                m.style.left = targetLoc.left + '%'; m.style.top = targetLoc.top + '%';
-                const l = document.createElement('div'); l.className = 'location-label';
-                l.innerText = "ВИ ТУТ"; l.style.left = targetLoc.left + '%'; l.style.top = targetLoc.top + '%';
-                markersLayer.appendChild(m); markersLayer.appendChild(l);
-                setZoom(1.8);
-            } else { setZoom(0.8); }
+                // Якщо ми знаємо, де гравець -> Ставимо Великий Маркер
+                createPlayerMarker(targetLoc, "📍 ВИ ТУТ");
+                // Старт: Приближений зум (1.8 = 180%)
+                setZoom(1.8); 
+            } else {
+                // Якщо локація невідома -> Показуємо всю карту (80%)
+                setZoom(0.8);
+            }
         };
+
+        // Функція створення маркера гравця
+        function createPlayerMarker(loc, text) {
+            const marker = document.createElement('div');
+            marker.className = 'player-marker';
+            marker.style.left = loc.left + '%';
+            marker.style.top = loc.top + '%';
+            
+            const label = document.createElement('div');
+            label.className = 'location-label';
+            label.innerText = text;
+            label.style.left = loc.left + '%';
+            label.style.top = loc.top + '%';
+            
+            markersLayer.appendChild(marker);
+            markersLayer.appendChild(label);
+        }
+
+        // Функція створення маленьких точок міст
+        function createDot(loc) {
+            const dot = document.createElement('div');
+            dot.className = 'location-dot';
+            dot.style.left = loc.left + '%';
+            dot.style.top = loc.top + '%';
+            // Показуємо назву при кліку
+            dot.onclick = () => alert(loc.name); 
+            markersLayer.appendChild(dot);
+        }
+
     </script>
 </body>
 </html>
-```
