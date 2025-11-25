@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Map of Far Lands</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body, html { margin: 0; padding: 0; height: 100%; background: #121212; overflow: hidden; font-family: sans-serif; }
+        
+        #viewport {
+            width: 100%; height: 100%; overflow: auto; position: relative;
+            scroll-behavior: smooth; -webkit-overflow-scrolling: touch;
+        }
+
+        #map-container { position: relative; transform-origin: 0 0; }
+        
+        #world-map { display: block; width: 1000px; height: auto; }
+
+        /* Маркер гравця */
+        .player-marker {
+            position: absolute; width: 40px; height: 40px;
+            background-image: url('https://cdn-icons-png.flaticon.com/512/686/686456.png');
+            background-size: cover; transform: translate(-50%, -100%);
+            z-index: 100; filter: drop-shadow(0 0 8px yellow);
+            animation: bounce 1s infinite alternate;
+        }
+
+        /* Точки локацій */
+        .location-dot {
+            position: absolute; width: 14px; height: 14px;
+            background-color: rgba(255, 255, 255, 0.6);
+            border: 2px solid #000; border-radius: 50%;
+            transform: translate(-50%, -50%); z-index: 50; cursor: pointer;
+        }
+
+        .location-label {
+            position: absolute; background: rgba(0, 0, 0, 0.8); color: #fff;
+            padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold;
+            transform: translate(-50%, 10px); white-space: nowrap;
+            border: 1px solid #ffd700; z-index: 99; pointer-events: none;
+        }
+
+        @keyframes bounce { from { transform: translate(-50%, -100%); } to { transform: translate(-50%, -120%); } }
+
+        .controls { position: fixed; bottom: 30px; right: 20px; display: flex; flex-direction: column; gap: 15px; z-index: 1000; }
+        .btn { width: 50px; height: 50px; background: rgba(30, 30, 30, 0.9); color: white; border: 1px solid #777; border-radius: 50%; font-size: 24px; display: flex; justify-content: center; align-items: center; cursor: pointer; user-select: none; }
+        .close-btn { position: fixed; top: 15px; left: 15px; background: rgba(200, 50, 50, 0.9); color: white; padding: 8px 16px; border-radius: 20px; font-weight: bold; cursor: pointer; z-index: 1000; }
+    </style>
+</head>
+<body>
+    <div class="close-btn" onclick="Telegram.WebApp.close()">Закрити</div>
+    <div id="viewport">
+        <div id="map-container">
+            <!-- 🔴 ВСТАВ СЮДИ ПОСИЛАННЯ НА ТВОЮ КАРТИНКУ -->
+            <img id="world-map" src="https://i.im.ge/2025/11/26/4hXkPS.Far-Lands.png" alt="World Map">
+            <div id="markers-layer"></div>
+        </div>
+    </div>
+    <div class="controls">
+        <div class="btn" onclick="changeZoom(1.2)">➕</div>
+        <div class="btn" onclick="changeZoom(0.8)">➖</div>
+    </div>
+
+    <script>
+        const tg = window.Telegram.WebApp; tg.expand();
+
+        // 🔴 ТВОЇ КООРДИНАТИ (Підстав точні з інструменту, якщо ці не підходять)
+        const MAP_LOCATIONS = {
+    1: { top: 78.03, left: 50.77 }, // Hillinguard
+    2: { top: 11.81, left: 69.77 }, // Windfoldigan
+    3: { top: 58.98, left: 49.52 }, // Oceanrise
+    4: { top: 32.00, left: 32.18 }, // Stormfallen
+    5: { top: 32.00, left: 60.03 }, // Heathergan
+    6: { top: 55.35, left: 56.83 }, // Winterfall
+    7: { top: 67.14, left: 16.68 }, // Forestfall
+    8: { top: 70.77, left: 79.28 }, // Liddingal
+};
+
+        const viewport = document.getElementById('viewport');
+        const mapContainer = document.getElementById('map-container');
+        const mapImg = document.getElementById('world-map');
+        const markersLayer = document.getElementById('markers-layer');
+        let currentZoom = 1.0; const BASE_WIDTH = 1000; 
+        
+        const urlParams = new URLSearchParams(window.location.search);
+        const locId = urlParams.get('loc');
+        const targetLoc = MAP_LOCATIONS[locId];
+
+        function setZoom(zoomLevel) {
+            if (zoomLevel < 0.5) zoomLevel = 0.5; if (zoomLevel > 3.0) zoomLevel = 3.0;
+            currentZoom = zoomLevel;
+            const newWidth = BASE_WIDTH * currentZoom;
+            mapImg.style.width = newWidth + 'px';
+            mapContainer.style.width = newWidth + 'px';
+            mapContainer.style.height = (newWidth * (mapImg.naturalHeight / mapImg.naturalWidth || 0.7)) + 'px';
+            if (targetLoc) centerOnLocation(targetLoc, newWidth);
+        }
+
+        function centerOnLocation(loc, mapWidth) {
+            const ratio = mapImg.naturalHeight / mapImg.naturalWidth || 0.7; 
+            const x = (loc.left / 100) * mapWidth;
+            const y = (loc.top / 100) * (mapWidth * ratio);
+            viewport.scrollLeft = x - viewport.clientWidth / 2;
+            viewport.scrollTop = y - viewport.clientHeight / 2;
+        }
+
+        function changeZoom(factor) { setZoom(currentZoom * factor); }
+
+        mapImg.onload = () => {
+            for (const [id, loc] of Object.entries(MAP_LOCATIONS)) {
+                if (id != locId) {
+                    const dot = document.createElement('div'); dot.className = 'location-dot';
+                    dot.style.left = loc.left + '%'; dot.style.top = loc.top + '%';
+                    dot.onclick = () => alert(loc.name);
+                    markersLayer.appendChild(dot);
+                }
+            }
+            if (targetLoc) {
+                const m = document.createElement('div'); m.className = 'player-marker';
+                m.style.left = targetLoc.left + '%'; m.style.top = targetLoc.top + '%';
+                const l = document.createElement('div'); l.className = 'location-label';
+                l.innerText = "ВИ ТУТ"; l.style.left = targetLoc.left + '%'; l.style.top = targetLoc.top + '%';
+                markersLayer.appendChild(m); markersLayer.appendChild(l);
+                setZoom(1.8);
+            } else { setZoom(0.8); }
+        };
+    </script>
+</body>
+</html>
+```
