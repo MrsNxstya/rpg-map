@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>QuestLine Launcher</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <!-- Підключаємо шрифти в стилі фентезі -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Lato:wght@300;400&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            margin: 0; padding: 0;
+            background-color: #0b0b0b;
+            /* Твоя карта на фоні, але затемнена */
+            background-image: url('https://i.im.ge/2025/11/26/4hXkPS.Far-Lands.png');
+            background-size: cover;
+            background-position: center;
+            color: #e0e0e0;
+            font-family: 'Lato', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden;
+            user-select: none;
+        }
+        
+        /* Сильне затемнення та туман */
+        .overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.6), rgba(0,0,0,0.9));
+            z-index: 1;
+            backdrop-filter: blur(3px);
+        }
+
+        .content {
+            z-index: 2;
+            text-align: left; /* У стилі Skyrim меню часто зліва або по центру списком */
+            width: 300px;
+            position: relative;
+        }
+
+        /* Логотип у стилі Скайрім */
+        h1 {
+            font-family: 'Cinzel', serif;
+            font-size: 48px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: #c5c5c5;
+            text-shadow: 0 2px 5px rgba(0,0,0,0.8);
+            margin-bottom: 10px;
+            text-align: center;
+            border-bottom: 2px solid transparent;
+            border-image: linear-gradient(to right, transparent, #666, transparent);
+            border-image-slice: 1;
+            padding-bottom: 10px;
+        }
+        
+        h3 {
+            font-family: 'Cinzel', serif;
+            font-size: 14px;
+            text-align: center;
+            color: #888;
+            margin-top: -10px;
+            margin-bottom: 40px;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+        }
+
+        /* Кнопки меню */
+        .menu-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .btn {
+            font-family: 'Cinzel', serif;
+            font-size: 22px;
+            color: #999;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.3s ease;
+            position: relative;
+            padding: 5px 0;
+            text-transform: uppercase;
+        }
+
+        /* Ефект при наведенні (Світіння та стрілочки) */
+        .btn:hover, .btn:active {
+            color: #fff;
+            text-shadow: 0 0 8px rgba(255, 255, 255, 0.6);
+            transform: scale(1.05);
+        }
+        
+        /* Стрілочки з боків при активності */
+        .btn:hover::before, .btn:active::before {
+            content: '❖';
+            position: absolute;
+            left: -25px;
+            color: #c0a062; /* Тьмяне золото */
+            font-size: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        
+        .btn:hover::after, .btn:active::after {
+            content: '❖';
+            position: absolute;
+            right: -25px;
+            color: #c0a062;
+            font-size: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        /* Неактивна кнопка (якщо немає збереження) */
+        .btn.disabled {
+            color: #444;
+            pointer-events: none;
+            text-decoration: line-through;
+        }
+
+        /* Екран Вступу (Лоре) */
+        #intro-screen {
+            display: none;
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: #0a0a0a;
+            z-index: 10;
+            padding: 40px 20px;
+            box-sizing: border-box;
+            text-align: center;
+            overflow-y: auto;
+            animation: fadeIn 1s;
+        }
+        
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        .intro-text {
+            font-family: 'Lato', sans-serif;
+            font-size: 18px;
+            line-height: 1.8;
+            color: #ccc;
+            max-width: 600px;
+            margin: 0 auto 50px auto;
+            text-align: justify;
+            border-left: 2px solid #444;
+            padding-left: 20px;
+        }
+
+        .intro-title {
+            font-family: 'Cinzel', serif;
+            font-size: 32px;
+            color: #c0a062;
+            margin-bottom: 30px;
+        }
+
+        .action-btn {
+            background: rgba(192, 160, 98, 0.1);
+            border: 1px solid #c0a062;
+            color: #c0a062;
+            padding: 15px 40px;
+            font-family: 'Cinzel', serif;
+            font-size: 18px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        
+        .action-btn:hover {
+            background: #c0a062;
+            color: #000;
+            box-shadow: 0 0 20px rgba(192, 160, 98, 0.4);
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="overlay"></div>
+
+    <!-- Головне Меню -->
+    <div class="content" id="main-menu">
+        <h1>QUESTLINE</h1>
+        <h3>The Age of Ashes</h3>
+        
+        <div class="menu-list">
+            <!-- Кнопка Продовжити (Активна, тільки якщо є дані) -->
+            <div class="btn" onclick="checkContinue()">Продовжити</div>
+            
+            <div class="btn" onclick="showIntro()">Нова Гра</div>
+            
+            <div class="btn" onclick="showAlert('Світ: Far Lands\nСтворено: Anastasiia\nВерсія: 1.0')">Про Світ</div>
+            
+            <div class="btn" style="color: #666; font-size: 18px;" onclick="Telegram.WebApp.close()">Вихід</div>
+        </div>
+    </div>
+
+    <!-- Екран Вступу (Лор) -->
+    <div id="intro-screen">
+        <div class="intro-title">Початок Шляху</div>
+        <div class="intro-text">
+            <p>П'ятсот років тому відбувся Розкол. Небеса стали фіолетовими, а Боги замовкли назавжди.</p>
+            <p>Магія стала прокляттям. Той, хто використовує її, платить власною кров'ю або розумом.</p>
+            <hr style="border: 0; border-top: 1px solid #333; margin: 20px 0;">
+            <p>Ви були заможним мандрівником. Ви мали коня, золото і мету.</p>
+            <p>Але банда "Червона Рука" забрала все.</p>
+            <p>Ви прокидаєтесь у холодному бруді біля Великої Брами Хілінгарду. Без зброї. Без надії.</p>
+            <p>Тільки з бажанням вижити.</p>
+        </div>
+        
+        <button class="action-btn" onclick="startGame('new')">ПРИЙНЯТИ ДОЛЮ</button>
+        <br><br>
+        <div class="btn" style="font-size: 16px;" onclick="hideIntro()">Повернутися</div>
+    </div>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+        
+        // Перевірка версії для методу enableClosingConfirmation (доступний з 6.2)
+        if (tg.isVersionAtLeast('6.2')) {
+            tg.enableClosingConfirmation();
+        }
+
+        // Функція "Продовжити"
+        function checkContinue() {
+            // Відправляємо боту команду, він сам перевірить базу
+            tg.sendData("continue");
+        }
+
+        // Показати вступ
+        function showIntro() {
+            document.getElementById('main-menu').style.display = 'none';
+            document.getElementById('intro-screen').style.display = 'block';
+        }
+
+        // Сховати вступ
+        function hideIntro() {
+            document.getElementById('main-menu').style.display = 'block';
+            document.getElementById('intro-screen').style.display = 'none';
+        }
+
+        // Почати нову гру
+        function startGame(mode) {
+            tg.sendData("new_game");
+        }
+        
+        // Функція показу повідомлень з фолбеком для старих версій
+        function showAlert(text) {
+            if (tg.isVersionAtLeast('6.2')) {
+                tg.showPopup({
+                    title: 'Info',
+                    message: text,
+                    buttons: [{type: 'ok'}]
+                });
+            } else {
+                // Фолбек для старіших версій Телеграму
+                alert(text);
+            }
+        }
+    </script>
+</body>
+</html>
