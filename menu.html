@@ -131,8 +131,8 @@
             text-decoration: line-through;
         }
 
-        /* Екран Вступу (Лор) */
-        #intro-screen, #lore-screen, #about-screen {
+        /* Екрани (Лор, Про Автора) */
+        #lore-screen, #about-screen {
             display: none;
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: #0a0a0a;
@@ -212,7 +212,8 @@
             <!-- Кнопка Продовжити -->
             <div class="btn" id="continue-btn" onclick="checkContinue()">Продовжити</div>
             
-            <div class="btn" onclick="showIntro()">Нова Гра</div>
+            <!-- ОНОВЛЕНО: Тепер відкриває нове меню створення героя -->
+            <div class="btn" onclick="openCharCreation()">Нова Гра</div>
             
             <div class="btn" onclick="showLoreScreen()">Про Світ</div>
             
@@ -222,22 +223,7 @@
         </div>
     </div>
 
-    <!-- 1. Екран Вступу (Лор для початку гри) -->
-    <div id="intro-screen">
-        <div class="intro-title">Початок Шляху</div>
-        <div class="intro-text">
-            <p>П'ятсот років тому відбувся Розкол. Небеса стали фіолетовими, а Боги замовкли назавжди.</p>
-            <p>Ви були заможним мандрівником. Банда "Червона Рука" забрала все.</p>
-            <hr style="border: 0; border-top: 1px solid #333; margin: 20px 0;">
-            <p>Ви прокидаєтесь у холодному бруді біля Великої Брами Хілінгарду. Без зброї. Без надії.</p>
-        </div>
-        
-        <button class="action-btn" onclick="startGame('new')">ПРИЙНЯТИ ДОЛЮ</button>
-        <br><br>
-        <div class="btn" style="font-size: 16px;" onclick="hideScreen('intro-screen')">Повернутися</div>
-    </div>
-    
-    <!-- 2. Екран Про Світ (Лор) -->
+    <!-- Екран Про Світ (Лор) -->
     <div id="lore-screen">
         <div class="intro-title" style="margin-top: 0;">Королівства та Магія</div>
         <div class="intro-text" style="text-align: left;">
@@ -255,13 +241,14 @@
         <div class="btn action-btn" style="width: 200px; margin-top: 20px;" onclick="hideScreen('lore-screen')">Назад</div>
     </div>
     
-    <!-- 3. Екран Про Авторів (Інфо) -->
+    <!-- Екран Про Авторів (Інфо) -->
     <div id="about-screen">
         <div class="intro-title" style="margin-top: 0;">Про Проект</div>
         <div class="intro-text" style="text-align: center;">
             <p style="font-size: 18px; color: #c5c5c5;">**QUESTLINE RPG Engine**</p>
             <p>Створено в рамках курсової роботи з використанням:</p>
             <ul style="color: #999; list-style: none; padding: 0;">
+                <li>**Мозок:** Google Gemini 2.5 Flash</li>
                 <li>**База:** SQLite (модульна структура)</li>
                 <li>**Технологія:** Telegram Web Apps (HTML/JS)</li>
             </ul>
@@ -280,30 +267,30 @@
         const tg = window.Telegram.WebApp;
         tg.expand();
         
-        // Виправлення помилки: перевірка версії
-        if (tg.isVersionAtLeast('6.2')) {
-            tg.enableClosingConfirmation();
-        }
-
-        // --- ЛОГІКА МЕНЮ ---
-
-        // Функція "Продовжити" (відправляє команду Python)
+        // Отримання URL для створення героя з параметрів запуску.
+        // Python має передати його як &start_param=char_url:<URL>
+        const initData = tg.initDataUnsafe.start_param || '';
+        const charCreationUrl = initData.startsWith('char_url:') ? initData.substring(9) : '';
+        
+        // Функція для перевірки, чи є збереження
         function checkContinue() {
             // Тут потрібно додати логіку перевірки наявності збереження (AJAX)
             tg.sendData("continue");
         }
+        
+        // Нова функція для відкриття меню створення героя
+        function openCharCreation() {
+            if (charCreationUrl) {
+                // Відкриває Web App створення героя за URL, переданим з Python
+                tg.openWebApp(charCreationUrl);
+            } else {
+                // Якщо URL не передано (наприклад, при прямому запуску Web App),
+                // відправляємо команду боту, щоб він відкрив це меню.
+                tg.sendData("OPEN_CHAR_CREATION_REQUEST");
+            }
+        }
 
-        // Запуск Нової Гри (відправляє команду Python)
-        function startGame(mode) {
-            tg.sendData("new_game");
-        }
-        
         // Відображення екранів
-        function showIntro() {
-            document.getElementById('main-menu').style.display = 'none';
-            document.getElementById('intro-screen').style.display = 'block';
-        }
-        
         function showLoreScreen() {
             document.getElementById('main-menu').style.display = 'none';
             document.getElementById('lore-screen').style.display = 'block';
@@ -318,20 +305,6 @@
             document.getElementById('main-menu').style.display = 'block';
             document.getElementById(id).style.display = 'none';
         }
-
-        // Функція показу повідомлень з фолбеком для старих версій
-        function showAlert(text) {
-            if (tg.isVersionAtLeast('6.2')) {
-                tg.showPopup({
-                    title: 'Info',
-                    message: text,
-                    buttons: [{type: 'ok'}]
-                });
-            } else {
-                alert(text);
-            }
-        }
-        
     </script>
 </body>
 </html>
