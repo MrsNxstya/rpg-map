@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>QuestLine Launcher</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <!-- Підключаємо шрифти в стилі фентезі -->
+    <!-- Підключаємо фентезі-шрифти -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Lato:wght@300;400&display=swap" rel="stylesheet">
@@ -14,7 +14,7 @@
         body {
             margin: 0; padding: 0;
             background-color: #0b0b0b;
-            /* Твоя карта на фоні, але затемнена */
+            /* Фон - Затемнена карта */
             background-image: url('https://i.im.ge/2025/11/26/4hXkPS.Far-Lands.png');
             background-size: cover;
             background-position: center;
@@ -32,19 +32,19 @@
         /* Сильне затемнення та туман */
         .overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: linear-gradient(to bottom, rgba(0,0,0,0.6), rgba(0,0,0,0.9));
+            background: linear-gradient(to bottom, rgba(0,0,0,0.6), rgba(0,0,0,0.95));
             z-index: 1;
             backdrop-filter: blur(3px);
         }
 
         .content {
             z-index: 2;
-            text-align: left; /* У стилі Skyrim меню часто зліва або по центру списком */
+            text-align: left;
             width: 300px;
             position: relative;
         }
 
-        /* Логотип у стилі Скайрім */
+        /* --- СТИЛЬ SKYRIM --- */
         h1 {
             font-family: 'Cinzel', serif;
             font-size: 48px;
@@ -131,8 +131,8 @@
             text-decoration: line-through;
         }
 
-        /* Екран Вступу (Лоре) */
-        #intro-screen {
+        /* Екран Вступу (Лор) */
+        #intro-screen, #lore-screen, #about-screen {
             display: none;
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: #0a0a0a;
@@ -146,6 +146,13 @@
         
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
+        .intro-title {
+            font-family: 'Cinzel', serif;
+            font-size: 32px;
+            color: #c0a062;
+            margin-bottom: 30px;
+        }
+
         .intro-text {
             font-family: 'Lato', sans-serif;
             font-size: 18px;
@@ -156,13 +163,6 @@
             text-align: justify;
             border-left: 2px solid #444;
             padding-left: 20px;
-        }
-
-        .intro-title {
-            font-family: 'Cinzel', serif;
-            font-size: 32px;
-            color: #c0a062;
-            margin-bottom: 30px;
         }
 
         .action-btn {
@@ -194,80 +194,109 @@
         <h3>The Age of Ashes</h3>
         
         <div class="menu-list">
-            <!-- Кнопка Продовжити (Активна, тільки якщо є дані) -->
-            <div class="btn" onclick="checkContinue()">Продовжити</div>
+            <!-- Кнопка Продовжити -->
+            <div class="btn" id="continue-btn" onclick="checkContinue()">Продовжити</div>
             
             <div class="btn" onclick="showIntro()">Нова Гра</div>
             
-            <div class="btn" onclick="showAlert('Світ: Far Lands\nСтворено: Anastasiia\nВерсія: 1.0')">Про Світ</div>
+            <div class="btn" onclick="showLoreScreen()">Про Світ</div>
             
             <div class="btn" style="color: #666; font-size: 18px;" onclick="Telegram.WebApp.close()">Вихід</div>
         </div>
     </div>
 
-    <!-- Екран Вступу (Лор) -->
+    <!-- 1. Екран Вступу (Лор для початку гри) -->
     <div id="intro-screen">
         <div class="intro-title">Початок Шляху</div>
         <div class="intro-text">
             <p>П'ятсот років тому відбувся Розкол. Небеса стали фіолетовими, а Боги замовкли назавжди.</p>
-            <p>Магія стала прокляттям. Той, хто використовує її, платить власною кров'ю або розумом.</p>
+            <p>Ви були заможним мандрівником. Банда "Червона Рука" забрала все.</p>
             <hr style="border: 0; border-top: 1px solid #333; margin: 20px 0;">
-            <p>Ви були заможним мандрівником. Ви мали коня, золото і мету.</p>
-            <p>Але банда "Червона Рука" забрала все.</p>
             <p>Ви прокидаєтесь у холодному бруді біля Великої Брами Хілінгарду. Без зброї. Без надії.</p>
-            <p>Тільки з бажанням вижити.</p>
         </div>
         
         <button class="action-btn" onclick="startGame('new')">ПРИЙНЯТИ ДОЛЮ</button>
         <br><br>
-        <div class="btn" style="font-size: 16px;" onclick="hideIntro()">Повернутися</div>
+        <div class="btn" style="font-size: 16px;" onclick="hideScreen('intro-screen')">Повернутися</div>
     </div>
+    
+    <!-- 2. Екран Про Світ (Лор) -->
+    <div id="lore-screen">
+        <div class="intro-title" style="margin-top: 0;">Королівства та Магія</div>
+        <div class="intro-text" style="text-align: left;">
+            <p style="font-size: 18px; color: #c0a062;">ГЕОГРАФІЯ ТА ВІЙНИ:</p>
+            <p>Світ розділений на **FAR LANDS** (Старий світ) та **WINTERQUARD** (Замерзле пекло).</p>
+            <ul style="color: #bbb; list-style-type: '❖ '; margin-left: 10px;">
+                <li>**HILINGUARD:** Останній Бастіон. Військовий стан, підозра до чужинців.</li>
+                <li>**MOUNTAINFALL:** Гори, гноми, небезпечні дракони.</li>
+                <li>**STORMFALLEN:** Земля вічних бур та некромантії.</li>
+                <li>**OCEANRISE:** Порти, торгівля, корупція.</li>
+            </ul>
+            <p style="font-size: 18px; color: #c0a062; margin-top: 30px;">ПРАВИЛА МАГІЇ:</p>
+            <p>Магія нестабільна. Вона вимагає життєвої сили (Ефіру). Зілля рідкісні і гіркі. Будьте обережні, щоб не втратити розум.</p>
+        </div>
+        <div class="btn action-btn" style="width: 200px; margin-top: 20px;" onclick="hideScreen('lore-screen')">Назад</div>
+    </div>
+    
+    <!-- 3. Екран Про Авторів (Інфо) -->
+    <div id="about-screen">
+        <div class="intro-title" style="margin-top: 0;">Про Проект</div>
+        <div class="intro-text" style="text-align: center;">
+            <p style="font-size: 18px; color: #c5c5c5;">**QUESTLINE RPG Engine**</p>
+            <p>Створено в рамках курсової роботи з використанням:</p>
+            <ul style="color: #999; list-style: none; padding: 0;">
+                <li>**Мозок:** Google Gemini 2.5 Flash</li>
+                <li>**База:** SQLite (модульна структура)</li>
+                <li>**Технологія:** Telegram Web Apps (HTML/JS)</li>
+            </ul>
+            <p style="color: #c0a062; margin-top: 30px;">Ідея та розробка: Anastasiia</p>
+        </div>
+        <div class="btn action-btn" style="width: 200px; margin-top: 20px;" onclick="hideScreen('about-screen')">Назад</div>
+    </div>
+
 
     <script>
         const tg = window.Telegram.WebApp;
         tg.expand();
         
-        // Перевірка версії для методу enableClosingConfirmation (доступний з 6.2)
+        // Виправлення помилки: перевірка версії
         if (tg.isVersionAtLeast('6.2')) {
             tg.enableClosingConfirmation();
         }
 
-        // Функція "Продовжити"
+        // --- ЛОГІКА НАВІГАЦІЇ ---
+
+        // Функція "Продовжити" (відправляє команду Python)
         function checkContinue() {
-            // Відправляємо боту команду, він сам перевірить базу
             tg.sendData("continue");
         }
 
-        // Показати вступ
-        function showIntro() {
-            document.getElementById('main-menu').style.display = 'none';
-            document.getElementById('intro-screen').style.display = 'block';
-        }
-
-        // Сховати вступ
-        function hideIntro() {
-            document.getElementById('main-menu').style.display = 'block';
-            document.getElementById('intro-screen').style.display = 'none';
-        }
-
-        // Почати нову гру
+        // Запуск Нової Гри (відправляє команду Python)
         function startGame(mode) {
             tg.sendData("new_game");
         }
         
-        // Функція показу повідомлень з фолбеком для старих версій
-        function showAlert(text) {
-            if (tg.isVersionAtLeast('6.2')) {
-                tg.showPopup({
-                    title: 'Info',
-                    message: text,
-                    buttons: [{type: 'ok'}]
-                });
-            } else {
-                // Фолбек для старіших версій Телеграму
-                alert(text);
-            }
+        // Відображення екранів
+        function showIntro() {
+            document.getElementById('main-menu').style.display = 'none';
+            document.getElementById('intro-screen').style.display = 'block';
         }
+        
+        function showLoreScreen() {
+            document.getElementById('main-menu').style.display = 'none';
+            document.getElementById('lore-screen').style.display = 'block';
+        }
+        
+        function showAboutScreen() {
+            document.getElementById('main-menu').style.display = 'none';
+            document.getElementById('about-screen').style.display = 'block';
+        }
+
+        function hideScreen(id) {
+            document.getElementById('main-menu').style.display = 'block';
+            document.getElementById(id).style.display = 'none';
+        }
+
     </script>
 </body>
 </html>
