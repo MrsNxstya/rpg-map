@@ -87,7 +87,6 @@
         </div>
     </div>
 
-    <!-- Екран Вступу -->
     <div id="intro-screen">
         <div class="intro-title">Початок Шляху</div>
         <div class="intro-text">
@@ -96,13 +95,11 @@
             <hr style="border: 0; border-top: 1px solid #333; margin: 20px 0;">
             <p>Ви прокидаєтесь у холодному бруді біля Великої Брами Хілінгарду. Без зброї. Без надії.</p>
         </div>
-        <!-- 🔥 ЦЯ КНОПКА ТЕПЕР ПЕРЕКИДАЄ НА СТВОРЕННЯ ГЕРОЯ -->
         <button class="action-btn" onclick="goToCreation()">ПРИЙНЯТИ ДОЛЮ</button>
         <br><br>
         <div class="btn" style="font-size: 16px;" onclick="hideScreen('intro-screen')">Повернутися</div>
     </div>
     
-    <!-- Екран Лор -->
     <div id="lore-screen">
         <div class="intro-title" style="margin-top: 0;">Світ Far Lands</div>
         <div class="intro-text" style="text-align: left;">
@@ -116,7 +113,6 @@
         <div class="btn action-btn" onclick="hideScreen('lore-screen')">Назад</div>
     </div>
     
-    <!-- Екран Про Автора -->
     <div id="about-screen">
         <div class="intro-title">Про Проект</div>
         <div class="intro-text" style="text-align: center;">
@@ -130,15 +126,22 @@
 
     <script>
         const tg = window.Telegram.WebApp;
+        tg.ready(); // <--- ВАЖЛИВО: Повідомляємо, що додаток готовий
         tg.expand();
 
+        // Функція для кнопки "Продовжити"
         function checkContinue() {
-            tg.sendData("continue");
+            try {
+                tg.sendData("continue");
+                // tg.close(); // Можна розкоментувати, якщо вікно не закривається саме
+            } catch (e) {
+                tg.showAlert("Помилка відправки: " + e);
+            }
         }
 
-        // 🔥 ПЕРЕХІД НА СТОРІНКУ СТВОРЕННЯ ГЕРОЯ
+        // Функція переходу на сторінку створення
         function goToCreation() {
-            // Перенаправлення браузера (працює всередині Телеграму)
+            // Переходимо на інший HTML файл у тій самій папці
             window.location.href = "char_creation.html";
         }
 
