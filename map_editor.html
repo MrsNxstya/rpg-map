@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <title>Map Coordinate Editor</title>
+    <style>
+        body {
+            background-color: #121212;
+            color: #e0e0e0;
+            font-family: sans-serif;
+            text-align: center;
+            margin: 0; padding: 20px;
+        }
+        h1 { color: #c0a062; font-family: 'serif'; }
+        
+        /* Контейнер для карти */
+        #map-container {
+            position: relative;
+            display: inline-block;
+            border: 2px solid #c0a062;
+            cursor: crosshair; /* Курсор-хрестик для точності */
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        }
+
+        #world-map {
+            display: block;
+            max-width: 1000px; /* Обмеження ширини для зручності */
+            height: auto;
+        }
+
+        /* Червона точка, яка показує де ми клікнули */
+        #click-marker {
+            position: absolute;
+            width: 10px; height: 10px;
+            background-color: red;
+            border: 2px solid white;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none; /* Щоб не заважала клікати */
+            display: none;
+        }
+
+        /* Панель результатів */
+        .output-panel {
+            margin-top: 20px;
+            padding: 15px;
+            background: #222;
+            border-top: 1px solid #444;
+            position: sticky;
+            bottom: 0;
+        }
+
+        input {
+            width: 70%;
+            padding: 10px;
+            font-size: 16px;
+            background: #111;
+            color: #0f0; /* Зелений колір як у хакерів */
+            border: 1px solid #555;
+            font-family: monospace;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background: #c0a062;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button:hover { background: #d4b581; }
+    </style>
+</head>
+<body>
+
+    <h1>🗺 Редактор Координат</h1>
+    <p>Клікни на карті, щоб отримати координати для <code>map.html</code></p>
+
+    <div id="map-container">
+        <img id="world-map" src="https://i.im.ge/2025/11/26/4hXkPS.Far-Lands.png" alt="World Map">
+        <div id="click-marker"></div>
+    </div>
+
+    <div class="output-panel">
+        <label>ID Локації: <input type="number" id="loc-id" value="9" style="width: 50px;"></label>
+        <label>Назва: <input type="text" id="loc-name" value="Нова Локація" style="width: 150px; color:white;"></label>
+        <br><br>
+        <input type="text" id="result-code" readonly placeholder="Клікни на карту...">
+        <button onclick="copyToClipboard()">📋 Копіювати</button>
+    </div>
+
+    <script>
+        const mapImg = document.getElementById('world-map');
+        const marker = document.getElementById('click-marker');
+        const output = document.getElementById('result-code');
+        const idInput = document.getElementById('loc-id');
+        const nameInput = document.getElementById('loc-name');
+
+        // Основна магія
+        mapImg.addEventListener('click', function(e) {
+            // Отримуємо розміри картинки
+            const rect = mapImg.getBoundingClientRect();
+            
+            // Координати кліку відносно картинки (в пікселях)
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            // Переводимо у відсотки (це саме те, що треба для top/left)
+            // toFixed(2) округлює до 2 знаків після коми (напр. 45.32)
+            const leftPercent = ((x / rect.width) * 100).toFixed(2);
+            const topPercent = ((y / rect.height) * 100).toFixed(2);
+
+            // Показуємо маркер
+            marker.style.left = leftPercent + '%';
+            marker.style.top = topPercent + '%';
+            marker.style.display = 'block';
+
+            // Формуємо готовий код
+            const id = idInput.value;
+            const name = nameInput.value;
+            
+            // Формат: ID: { top: Y, left: X, name: "Name" }
+            const code = `${id}: { top: ${topPercent}, left: ${leftPercent}, name: "${name}" },`;
+            
+            output.value = code;
+        });
+
+        // Функція копіювання
+        function copyToClipboard() {
+            output.select();
+            document.execCommand('copy');
+            alert("Код скопійовано! Вставте його в map.html");
+            
+            // Автоматично збільшуємо ID для наступної точки
+            idInput.value = parseInt(idInput.value) + 1;
+        }
+    </script>
+
+</body>
+</html>
