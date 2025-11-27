@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Статус Героя</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Lato:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background: #111 url('https://i.im.ge/2025/11/26/4hXkPS.Far-Lands.png') no-repeat center center fixed;
+            background-size: cover; color: #e0e0e0; font-family: 'Lato', sans-serif;
+            margin: 0; padding: 20px; text-align: center;
+        }
+        .container {
+            background: rgba(0, 0, 0, 0.85); border: 2px solid #c0a062;
+            border-radius: 10px; padding: 20px; max-width: 400px; margin: 0 auto;
+            backdrop-filter: blur(5px);
+        }
+        h1 { font-family: 'Cinzel', serif; color: #c0a062; margin-top: 0; }
+        .avatar { font-size: 60px; margin-bottom: 10px; }
+        .stat-row { display: flex; justify-content: space-between; margin: 10px 0; border-bottom: 1px solid #333; padding-bottom: 5px; }
+        .label { font-weight: bold; color: #aaa; }
+        .value { color: #fff; font-family: 'Cinzel', serif; }
+        
+        /* Бари здоров'я та мани */
+        .bar-container { width: 100%; background: #333; height: 20px; border-radius: 10px; margin: 5px 0 15px 0; overflow: hidden; position: relative; }
+        .bar { height: 100%; transition: width 0.5s; }
+        .hp-bar { background: #d32f2f; }
+        .mp-bar { background: #1976d2; }
+        .bar-text { position: absolute; width: 100%; top: 0; left: 0; font-size: 12px; line-height: 20px; text-shadow: 1px 1px 2px black; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="avatar" id="avatar">👤</div>
+        <h1 id="hero-name">Герой</h1>
+        <div id="hero-desc" style="color: #888; margin-bottom: 20px;">Раса Клас</div>
+
+        <div class="label">Здоров'я (HP)</div>
+        <div class="bar-container">
+            <div class="bar hp-bar" id="hp-fill" style="width: 50%;"></div>
+            <div class="bar-text" id="hp-text">50 / 100</div>
+        </div>
+
+        <div class="label">Мана (MP)</div>
+        <div class="bar-container">
+            <div class="bar mp-bar" id="mp-fill" style="width: 50%;"></div>
+            <div class="bar-text" id="mp-text">20 / 50</div>
+        </div>
+
+        <div class="stat-row"><span class="label">Рівень:</span> <span class="value" id="lvl">1</span></div>
+        <div class="stat-row"><span class="label">Досвід:</span> <span class="value" id="xp">0</span></div>
+        <div class="stat-row"><span class="label">Золото:</span> <span class="value" id="gold">0</span></div>
+        <div class="stat-row"><span class="label">Репутація:</span> <span class="value" id="rep">0</span></div>
+    </div>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+
+        // Функція для отримання параметрів з URL
+        function getParams() {
+            const params = new URLSearchParams(window.location.search);
+            return Object.fromEntries(params.entries());
+        }
+
+        // Заповнюємо сторінку даними
+        const data = getParams();
+
+        if (data.race) {
+            document.getElementById('hero-name').innerText = `${data.race} ${data.char_class}`;
+            document.getElementById('hero-desc').innerText = `${data.gender}, ${data.age} років`;
+            
+            // HP
+            const hp = parseInt(data.hp);
+            const max_hp = parseInt(data.max_hp);
+            document.getElementById('hp-fill').style.width = (hp / max_hp * 100) + "%";
+            document.getElementById('hp-text').innerText = `${hp} / ${max_hp}`;
+
+            // MP
+            const mp = parseInt(data.mp);
+            const max_mp = parseInt(data.max_mp);
+            document.getElementById('mp-fill').style.width = (mp / max_mp * 100) + "%";
+            document.getElementById('mp-text').innerText = `${mp} / ${max_mp}`;
+
+            document.getElementById('lvl').innerText = data.level;
+            document.getElementById('xp').innerText = data.xp;
+            document.getElementById('rep').innerText = data.rep;
+        } else {
+            document.querySelector('.container').innerHTML = "<h2>Дані не знайдено</h2><p>Відкривайте це вікно через бота.</p>";
+        }
+    </script>
+</body>
+</html>
