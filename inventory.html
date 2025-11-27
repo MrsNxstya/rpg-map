@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <title>Інвентар</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Lato:wght@400&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background: #0f0f0f; color: #eee; font-family: 'Lato', sans-serif;
+            margin: 0; padding: 10px;
+        }
+        h2 { text-align: center; font-family: 'Cinzel', serif; color: #c0a062; }
+        .grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+            gap: 10px; margin-top: 15px;
+        }
+        .item-card {
+            background: #222; border: 1px solid #444; border-radius: 5px;
+            padding: 10px; text-align: center; font-size: 12px;
+            position: relative; cursor: pointer;
+        }
+        .item-card.equipped { border-color: #4caf50; box-shadow: 0 0 5px #4caf50; }
+        .icon { font-size: 24px; margin-bottom: 5px; display: block; }
+        .rarity-Common { color: #fff; }
+        .rarity-Rare { color: #42a5f5; }
+        .rarity-Epic { color: #ab47bc; }
+        .rarity-Legendary { color: #ffca28; }
+    </style>
+</head>
+<body>
+    <h2>Рюкзак Мандрівника</h2>
+    <div id="inventory-grid" class="grid"></div>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+
+        function getParams() {
+            const params = new URLSearchParams(window.location.search);
+            // Дані інвентаря передаються як довгий JSON рядок в параметрі 'items'
+            try {
+                return JSON.parse(decodeURIComponent(params.get('items') || "[]"));
+            } catch (e) { return []; }
+        }
+
+        const items = getParams();
+        const grid = document.getElementById('inventory-grid');
+
+        if (items.length === 0) {
+            grid.innerHTML = "<p style='grid-column: 1/-1; text-align: center; color: #666;'>Порожньо...</p>";
+        } else {
+            items.forEach(item => {
+                const card = document.createElement('div');
+                card.className = `item-card ${item.is_equipped ? 'equipped' : ''}`;
+                
+                let icon = "📦";
+                if (item.type === "Weapon") icon = "⚔️";
+                if (item.type === "Armor") icon = "🛡";
+                if (item.type === "Potion") icon = "🧪";
+
+                card.innerHTML = `
+                    <span class="icon">${icon}</span>
+                    <div class="rarity-${item.rarity}">${item.name}</div>
+                    ${item.is_equipped ? '<div style="color:#4caf50; font-size:10px;">[E]</div>' : ''}
+                `;
+                
+                // При кліку можна відправляти дані назад боту, щоб одягнути/зняти
+                card.onclick = () => {
+                    tg.sendData(JSON.stringify({action: "use_item", id: item.inv_id}));
+                    // Можна закрити або залишити
+                };
+                grid.appendChild(card);
+            });
+        }
+    </script>
+</body>
+</html>
