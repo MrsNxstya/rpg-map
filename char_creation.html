@@ -198,7 +198,7 @@
     <script>
         const tg = window.Telegram.WebApp;
         tg.expand();
-        tg.MainButton.hide();
+        tg.MainButton.hide(); // Ховаємо стандартну кнопку, у нас своя
 
         // --- КОНФІГУРАЦІЯ ГРИ (МАЄ БУТИ СИНХРОНІЗОВАНА З config.py) ---
         const RPG_RACES = {
@@ -333,11 +333,19 @@
                 class: state.class
             };
             
-            // Відправка JSON даних у Telegram Bot
-            tg.sendData(JSON.stringify(dataToSend));
+            // --- ДЕБАГ: Показуємо, що ми намагаємось відправити ---
+            // Якщо це повідомлення не з'явиться на екрані, значить кнопка не працює!
+            // tg.showAlert("Відправляю дані боту..."); 
             
-            // Візуальний зворотний зв'язок
-            tg.close();
+            try {
+                // Відправка JSON даних у Telegram Bot
+                tg.sendData(JSON.stringify(dataToSend));
+                
+                // Закриваємо вікно (хоча sendData зазвичай робить це сам)
+                // tg.close(); 
+            } catch (e) {
+                tg.showAlert("Помилка відправки: " + e);
+            }
         }
         
         initialize();
