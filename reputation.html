@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <title>Репутація</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Lato:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background: #121212; color: #e0e0e0; font-family: 'Lato', sans-serif;
+            padding: 20px; text-align: center;
+        }
+        h2 { font-family: 'Cinzel', serif; color: #c0a062; margin-bottom: 30px; }
+        
+        .faction-card {
+            background: #1e1e1e; border: 1px solid #333; border-radius: 8px;
+            padding: 15px; margin-bottom: 20px; text-align: left;
+        }
+        
+        .faction-name { font-family: 'Cinzel', serif; font-size: 18px; color: #fff; margin-bottom: 5px; }
+        .faction-status { font-size: 12px; color: #888; float: right; }
+        
+        .progress-container {
+            width: 100%; background: #000; height: 10px; border-radius: 5px; overflow: hidden; position: relative;
+        }
+        
+        /* Червона (погана) ліворуч, Зелена (добра) праворуч від центру */
+        .progress-bar {
+            height: 100%; transition: width 0.5s ease;
+        }
+        
+        .neutral-marker {
+            position: absolute; left: 50%; top: 0; width: 2px; height: 100%; background: #fff; z-index: 10;
+        }
+    </style>
+</head>
+<body>
+    <h2>Політична Карта</h2>
+    <div id="list"></div>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+
+        function getParams() {
+            const params = new URLSearchParams(window.location.search);
+            try { return JSON.parse(decodeURIComponent(params.get('data'))); } 
+            catch (e) { return {}; }
+        }
+
+        const reputations = getParams();
+        const container = document.getElementById('list');
+
+        // Конфігурація фракцій (Кольори)
+        const config = {
+            "Hilinguard": { color: "#3498db" }, // Синій
+            "Stormfallen": { color: "#9b59b6" }, // Фіолетовий
+            "Windfoldigan": { color: "#2ecc71" }, // Зелений
+            "Oceanrise": { color: "#e74c3c" } // Червоний
+        };
+
+        for (const [name, value] of Object.entries(reputations)) {
+            const card = document.createElement('div');
+            card.className = 'faction-card';
+            
+            let status = "Нейтралітет";
+            if (value > 20) status = "Дружній";
+            if (value > 60) status = "Герой";
+            if (value < -20) status = "Неприязнь";
+            if (value < -60) status = "Ворог";
+
+            // Логіка відображення бару (-100..100 -> 0..100%)
+            // 0 = 50% ширини. +100 = 100%. -100 = 0%.
+            const percent = ((value + 100) / 200) * 100;
+            const barColor = value >= 0 ? config[name]?.color || "#ccc" : "#555"; // Сірий якщо мінус, колір якщо плюс
+
+            card.innerHTML = `
+                <div class="faction-name">${name} <span class="faction-status">${value} (${status})</span></div>
+                <div class="progress-container">
+                    <div class="neutral-marker"></div>
+                    <div class="progress-bar" style="width: ${percent}%; background: ${barColor};"></div>
+                </div>
+            `;
+            container.appendChild(card);
+        }
+    </script>
+</body>
+</html>
